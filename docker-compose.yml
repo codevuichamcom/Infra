@@ -1,53 +1,53 @@
 version: "3.9"
 
 volumes:
-  postgres-explorer-data:
-  minio-data:
-  kafka-secrets:
-  kafka-data:
-  redis-master-data:
-  redis-slave-data:
-  zookeeper-data:
-  zookeeper-logs:
-  zookeeper-secrets:
+  postgres-explorer-data-100:
+  minio-data-100:
+  kafka-secrets-100:
+  kafka-data-100:
+  redis-master-data-100:
+  redis-slave-data-100:
+  zookeeper-data-100:
+  zookeeper-logs-100:
+  zookeeper-secrets-100:
 
 networks:
-  explorer-infra-net:
+  explorer-infra-net-100:
     external: true
 
 services:
   postgres-explorer:
     restart: unless-stopped
     image: postgres:${POSTGRES_VERSION:-15-alpine}
-    shm_size: 32gb
+    shm_size: 500MB
     environment:
       - POSTGRES_LOGGING=true
       - POSTGRES_DB=${POSTGRES_DB:-explorer}
       - POSTGRES_USER=${POSTGRES_USER:-cardano-master}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-dbpass}
     ports:
-      - ${POSTGRES_PORT:-54322}:5432
+      - ${POSTGRES_PORT:-54422}:5432
     volumes:
-      - postgres-explorer-data:/var/lib/postgresql/data
-    command: >
-      postgres
-        -c max_connections=250
-        -c max_locks_per_transaction=256
-        -c shared_buffers=12GB
-        -c effective_cache_size=31GB
-        -c maintenance_work_mem=2GB
-        -c checkpoint_completion_target=0.9
-        -c checkpoint_timeout=1h
-        -c synchronous_commit=off
-        -c wal_buffers=16MB
-        -c default_statistics_target=500
-        -c random_page_cost=1.1
-        -c effective_io_concurrency=500
-        -c work_mem=1024GB
-        -c min_wal_size=1GB
-        -c max_wal_size=2GB
-        -c max_parallel_workers_per_gather=4
-        -c max_parallel_maintenance_workers=4
+      - postgres-explorer-data-100:/var/lib/postgresql/data
+    # command: >
+    #   postgres
+    #     -c max_connections=250
+    #     -c max_locks_per_transaction=256
+    #     -c shared_buffers=12GB
+    #     -c effective_cache_size=31GB
+    #     -c maintenance_work_mem=2GB
+    #     -c checkpoint_completion_target=0.9
+    #     -c checkpoint_timeout=1h
+    #     -c synchronous_commit=off
+    #     -c wal_buffers=16MB
+    #     -c default_statistics_target=500
+    #     -c random_page_cost=1.1
+    #     -c effective_io_concurrency=500
+    #     -c work_mem=1024GB
+    #     -c min_wal_size=1GB
+    #     -c max_wal_size=2GB
+    #     -c max_parallel_workers_per_gather=4
+    #     -c max_parallel_maintenance_workers=4
 
     logging:
       driver: "json-file"
@@ -55,23 +55,23 @@ services:
         max-size: "200k"
         max-file: "100"
     networks:
-      - explorer-infra-net
+      - explorer-infra-net-100
       - default
 
   minio:
     image: minio/minio:latest
     restart: "no"
     ports:
-      - 9100:9000
-      - 9101:9091
+      - 9200:9000
+      - 9201:9091
     environment:
       - MINIO_ROOT_USER=${MINIO_ACCESS_KEY:-minio_access_key}
       - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY:-minio_secret_key}
     volumes:
-      - minio-data:/data
+      - minio-data-100:/data
     command: server /data --console-address ":9091"
     networks:
-      - explorer-infra-net
+      - explorer-infra-net-100
       - default
 
   redis-master:
@@ -83,16 +83,16 @@ services:
       - REDIS_PASSWORD=${REDIS_MASTER_PASS:-redis_master_pass}
     command: redis-server
     ports:
-      - "26316:6379"
+      - "26416:6379"
     logging:
       driver: "json-file"
       options:
         max-size: "200k"
         max-file: "100"
     volumes:
-      - redis-master-data:/data
+      - redis-master-data-100:/data
     networks:
-      - explorer-infra-net
+      - explorer-infra-net-100
       - default
 
   redis-slave:
@@ -106,21 +106,21 @@ services:
       - REDIS_PASSWORD=${REDIS_SLAVE_PASS:-redis_slave_pass}
     command: redis-server --slaveof redis-master 6379
     ports:
-      - "26317:6379"
+      - "26417:6379"
     links:
       - redis-master
     volumes:
-      - redis-slave-data:/data
+      - redis-slave-data-100:/data
     logging:
       driver: "json-file"
       options:
         max-size: "200k"
         max-file: "100"
     networks:
-      - explorer-infra-net
+      - explorer-infra-net-100
       - default
 
-  redis-sentinel:
+  redis-sentinel-100:
     restart: unless-stopped
     hostname: ${REDIS_SENTINEL_HOST:-cardano.redis.sentinel}
     image: "bitnami/redis-sentinel"
@@ -133,7 +133,7 @@ services:
       - REDIS_SENTINEL_QUORUM=2
       - REDIS_SENTINEL_PASSWORD=${REDIS_SENTINEL_PASS:-redis_sentinel_pass}
     ports:
-      - "26382:26379"
+      - "26482:26379"
     depends_on:
       - redis-master
       - redis-slave
@@ -146,7 +146,7 @@ services:
         max-size: "200k"
         max-file: "100"
     networks:
-      - explorer-infra-net
+      - explorer-infra-net-100
       - default
 
   zookeeper:
@@ -158,7 +158,7 @@ services:
       ZOOKEEPER_TICK_TIME: "2000"
       ZOOKEEPER_SERVERS: "zookeeper:22888:23888"
     ports:
-      - "2184:2181"
+      - "2284:2181"
     healthcheck:
       test: nc -z localhost 2181 || exit -1
       interval: 10s
@@ -171,11 +171,11 @@ services:
         max-size: "200k"
         max-file: "100"
     volumes:
-      - zookeeper-secrets:/etc/zookeeper/secrets
-      - zookeeper-data:/var/lib/zookeeper/data
-      - zookeeper-logs:/var/lib/zookeeper/log
+      - zookeeper-secrets-100:/etc/zookeeper/secrets
+      - zookeeper-data-100:/var/lib/zookeeper/data
+      - zookeeper-logs-100:/var/lib/zookeeper/log
     networks:
-      - explorer-infra-net
+      - explorer-infra-net-100
       - default
 
   kafka:
@@ -185,8 +185,8 @@ services:
       zookeeper:
         condition: service_healthy
     ports:
-      - "29098:29092"
-      - "29099:29097"
+      - "29198:29092"
+      - "29199:29097"
     links:
       - zookeeper
     environment:
@@ -214,22 +214,22 @@ services:
       retries: 3
       start_period: 15s
     volumes:
-      - kafka-secrets:/etc/kafka/secrets
-      - kafka-data:/var/lib/kafka/data
+      - kafka-secrets-100:/etc/kafka/secrets
+      - kafka-data-100:/var/lib/kafka/data
     logging:
       driver: "json-file"
       options:
         max-size: "200k"
         max-file: "100"
     networks:
-      - explorer-infra-net
+      - explorer-infra-net-100
       - default
 
   kafdrop:
     image: obsidiandynamics/kafdrop
     restart: "no"
     ports:
-      - "9003:9000"
+      - "9103:9000"
     environment:
       KAFKA_BROKERCONNECT: "kafka:9092"
     depends_on:
@@ -243,5 +243,5 @@ services:
         max-size: "200k"
         max-file: "100"
     networks:
-      - explorer-infra-net
+      - explorer-infra-net-100
       - default
